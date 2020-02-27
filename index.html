@@ -1,0 +1,133 @@
+
+<!doctype html>
+<html>
+    <head>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha256-L/W5Wfqfa0sdBNIKN9cG6QA5F2qx4qICmU2VgLruv9Y=" crossorigin="anonymous" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.4.1/js/bootstrap.bundle.min.js" integrity="sha256-OUFW7hFO0/r5aEGTQOz9F/aXQOt+TwqI1Z4fbVvww04=" crossorigin="anonymous"></script>
+        <script src="https://w.soundcloud.com/player/api.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+        <title>Podcast demo</title>
+    </head>
+    <body>
+        <div id="podcast-app" class="container" style="width:530px">
+            <br>
+            <h1>Podcast</h1>
+            <h2 class="title">{{title}}</h2>
+            <p class="author"><small>{{author}}</small></p>
+            <span class="current_time">{{curr_time}}</span> / <span class="time_duration">{{full_duration}}</span><br><br>
+            <p class="description text-truncate"><small v-html="description"></small></p>
+            <iframe
+                allow="autoplay"
+                style="display: none;"
+                id="soundcloud_widget"
+                ref="soundcloud_widget"
+                src="https://w.soundcloud.com/player/?url=https://api.soundcloud.com/tracks/293?auto_play=true&show_artwork=false&liking=false&sharing=false"
+                width="420"
+                height="120"
+                frameborder="no"></iframe>
+            <button type="button" class="play btn btn-dark" ref="playBtn" @click="clickPlay">{{playBtnLabel}}</button>
+            <br><br><small>----------------------------</small><br><br>
+            <h5>Playlist</h5><br>
+            <button type="button" class="playlist-btn b0 btn"
+                v-bind:class="btnClass(0)"
+                @click="selectEp(0)" >Flickermood</button><br><br>
+            <button type="button" class="playlist-btn b1 btn"
+                v-bind:class="btnClass(1)" @click="selectEp(1)"
+                >Using Splashes</button><br><br>
+            <button type="button" class="playlist-btn b2 btn"
+                v-bind:class="btnClass(2)" @click="selectEp(2)"
+                >Journeyman</button><br><br>
+            <button type="button" class="playlist-btn b3 btn"
+                v-bind:class="btnClass(3)" @click="selectEp(3)"
+                >Atomised</button><br><br>
+            <button type="button" class="playlist-btn b4 btn"
+                v-bind:class="btnClass(4)" @click="selectEp(4)"
+                >Characteristics</button><br><br>
+        </div>
+    </body>
+</html>
+<script>
+
+    const podcastApp = new Vue({
+        el: '#podcast-app',
+        data: function() {
+            return {
+                widget: this.widget,
+                title :this.title,
+                description: this.description,
+                author: this.author,
+                full_duration: this.full_duration,
+                playBtnLabel: this.playBtnLabel,
+                curr_time: this.curr_time,
+                activeBtn: this.activeBtn
+            };
+        },
+        methods: {
+            msToTime(s) {
+              var pad = (n, z = 2) => ('00' + n).slice(-z);
+              return pad(s/3.6e6|0) + ':' + pad((s%3.6e6)/6e4 | 0) + ':' + pad((s%6e4)/1000|0)
+            },
+            reloadInfo() {
+                this.widget.getCurrentSound((currentSound) => {
+                    this.title = currentSound.title;
+                    this.description = currentSound.description;
+                    this.full_duration = this.msToTime(currentSound.full_duration);
+                    this.author = currentSound.label_name;
+                });
+            },
+            clickPlay(){
+                this.widget.toggle();
+            },
+            selectEp( num ) {
+                this.activeBtn = num;
+                const track = 293 + num;
+                this.widget.load(`https://api.soundcloud.com/tracks/${track}`, this.widget_options);
+            },
+            btnClass(currBtn){
+                return this.activeBtn == currBtn ? 'btn-success' : 'btn-info';
+            }
+        },
+        created: function() {
+            this.widget = null;
+            this.title = '';
+            this.description = '';
+            this.author = '';
+            this.full_duration = '';
+            this.playBtnLabel ='Play';
+            this.curr_time = '';
+            this.activeBtn = 0
+        },
+        mounted: function() {
+            this.widget = SC.Widget(this.$refs.soundcloud_widget);
+            this.widget_options = {
+                auto_play: true
+            };
+            this.widget_options.callback = ()=>{
+                this.reloadInfo();
+            };
+
+            this.widget.bind(SC.Widget.Events.READY, () => {
+                this.reloadInfo();
+            });
+
+            this.widget.bind(SC.Widget.Events.PLAY, () => {
+                this.playBtnLabel ='Pause';
+            });
+
+            this.widget.bind(SC.Widget.Events.PAUSE, () => {
+                this.playBtnLabel ='Play';
+            });
+
+            this.widget.bind(SC.Widget.Events.PLAY_PROGRESS, () => {
+                this.widget.getPosition((position) => {
+                    this.curr_time = this.msToTime(position);
+                });
+            });
+        },
+        updated: function() {
+        },
+        computed: {
+        }
+    });
+</script>
